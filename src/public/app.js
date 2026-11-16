@@ -355,10 +355,73 @@ function renderDeviceCard(d) {
         </div>
       </div>
     `;
-  } else {
+  } else if (d.type === 'sensor') {
+    const isLeak = Boolean(d.state.leakDetected);
     telemetryHtml = `
-      <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 text-xs text-slate-400">
-        Status: <span class="text-slate-200 font-mono">${JSON.stringify(d.state || {})}</span>
+      <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+        <div>
+          <span class="text-slate-500 block">Water Status</span>
+          <span class="font-bold ${isLeak ? 'text-rose-400' : 'text-emerald-400'} flex items-center gap-1">
+            <i class="fa-solid ${isLeak ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
+            ${isLeak ? 'LEAK DETECTED' : 'Dry & Nominal'}
+          </span>
+        </div>
+        <div class="text-right">
+          <span class="text-slate-500 block">Temperature</span>
+          <span class="text-slate-300 font-semibold">${d.state.temperature !== undefined ? d.state.temperature + '°C' : '--'}</span>
+        </div>
+      </div>
+    `;
+  } else if (d.type === 'motion') {
+    const hasMotion = Boolean(d.state.motion);
+    telemetryHtml = `
+      <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+        <div>
+          <span class="text-slate-500 block">Motion Activity</span>
+          <span class="font-bold ${hasMotion ? 'text-amber-400' : 'text-slate-300'} flex items-center gap-1">
+            <i class="fa-solid ${hasMotion ? 'fa-person-walking' : 'fa-shield'}"></i>
+            ${hasMotion ? 'Motion Detected' : 'All Clear'}
+          </span>
+        </div>
+        <div class="text-right">
+          <span class="text-slate-500 block">Illuminance</span>
+          <span class="text-amber-300 font-semibold">${d.state.illuminanceLux !== undefined ? d.state.illuminanceLux + ' Lux' : '--'}</span>
+        </div>
+      </div>
+    `;
+  } else if (d.type === 'garage') {
+    const isOpen = d.state.doorState === 'open';
+    telemetryHtml = `
+      <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+        <div>
+          <span class="text-slate-500 block">Door State</span>
+          <span class="font-bold ${isOpen ? 'text-amber-400' : 'text-slate-300'} uppercase">
+            ${d.state.doorState || 'Closed'}
+          </span>
+        </div>
+        <div class="text-right">
+          <span class="text-slate-500 block">Safety Sensor</span>
+          <span class="${d.state.obstructionDetected ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
+            ${d.state.obstructionDetected ? 'Obstructed' : 'Clear'}
+          </span>
+        </div>
+      </div>
+    `;
+  } else {
+    // Clean formatted badges for any generic properties
+    const stateEntries = Object.entries(d.state || {});
+    telemetryHtml = `
+      <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 text-xs">
+        <div class="flex flex-wrap gap-1.5">
+          ${stateEntries.length > 0 
+            ? stateEntries.map(([k, v]) => `
+              <span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300 truncate max-w-full">
+                <span class="text-slate-500">${escapeHtml(k)}:</span> ${escapeHtml(String(v))}
+              </span>
+            `).join('')
+            : '<span class="text-slate-500">Standby</span>'
+          }
+        </div>
       </div>
     `;
   }
@@ -385,24 +448,24 @@ function renderDeviceCard(d) {
   }
 
   return `
-    <div class="bg-slate-900 border ${isOnline ? 'border-slate-800' : 'border-rose-900/30'} rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-slate-700 transition space-y-3 relative group">
+    <div class="bg-slate-900 border ${isOnline ? 'border-slate-800' : 'border-rose-900/30'} rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-slate-700 transition space-y-3 relative group overflow-hidden">
       <!-- Top header -->
       <div>
         <div class="flex items-start justify-between gap-2">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl ${isOnline ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-slate-800 text-slate-500'} flex items-center justify-center text-lg">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl shrink-0 ${isOnline ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-slate-800 text-slate-500'} flex items-center justify-center text-lg">
               <i class="${iconClass}"></i>
             </div>
-            <div>
-              <h4 class="text-sm font-bold text-white group-hover:text-indigo-400 transition">${escapeHtml(d.name)}</h4>
-              <p class="text-xs text-slate-400 flex items-center gap-1.5">
+            <div class="min-w-0">
+              <h4 class="text-sm font-bold text-white group-hover:text-indigo-400 transition truncate">${escapeHtml(d.name)}</h4>
+              <p class="text-xs text-slate-400 flex items-center gap-1.5 truncate">
                 <i class="fa-solid fa-location-dot text-slate-500"></i> ${escapeHtml(d.room)}
                 <span class="text-slate-600">•</span>
                 <span class="text-slate-500 uppercase text-[10px] tracking-wider font-semibold">${escapeHtml(d.type)}</span>
               </p>
             </div>
           </div>
-          <div>${statusBadge}</div>
+          <div class="shrink-0">${statusBadge}</div>
         </div>
 
         <!-- Telemetry Widget -->
@@ -412,23 +475,23 @@ function renderDeviceCard(d) {
 
         <!-- Metadata row -->
         <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
-          <span>IP: <code class="text-slate-400">${d.ipAddress || '--'}</code></span>
-          ${batteryBadge}
+          <span class="truncate">IP: <code class="text-slate-400">${d.ipAddress || '--'}</code></span>
+          <div class="shrink-0 pl-2">${batteryBadge}</div>
         </div>
       </div>
 
       <!-- Action Footer -->
-      <div class="pt-2 flex items-center gap-2">
+      <div class="pt-2 flex flex-wrap items-center gap-2">
         ${actionButtonsHtml}
         
         <!-- Toggle Online / Offline simulation button -->
-        <button onclick="toggleOnline('${d.id}')" title="Simulate device connect / disconnect" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+        <button onclick="toggleOnline('${d.id}')" title="Simulate device connect / disconnect" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center justify-center gap-1 font-medium min-h-[32px]">
           <i class="fa-solid fa-toggle-on text-xs"></i>
-          <span class="hidden sm:inline">${isOnline ? 'Set Offline' : 'Set Online'}</span>
+          <span>${isOnline ? 'Set Offline' : 'Set Online'}</span>
         </button>
 
         <!-- Delete button -->
-        <button onclick="deleteDevice('${d.id}')" title="Remove device" class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg transition">
+        <button onclick="deleteDevice('${d.id}')" title="Remove device" class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg transition min-h-[32px] flex items-center justify-center">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
       </div>
